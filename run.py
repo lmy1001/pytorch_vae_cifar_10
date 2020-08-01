@@ -64,8 +64,8 @@ def main(args):
     train_data, train_label, val_data, val_label, test_data, test_labels = cifar10_data.prepare_cifar_10_data()
 
     n_train_samples = train_data.shape[0]
-    #n_samples = n_train_samples         #only train 2000 images as test
-    n_samples = 2000
+    n_samples = n_train_samples         #only train 2000 images as test
+    #n_samples = 2000
     n_val_samples = val_data.shape[0]
     n_test_samples = test_data.shape[0]
     image_size = 32
@@ -115,9 +115,7 @@ def main(args):
     batch_size = args.batch_size
     epochs = args.num_epochs
     num_batches = int(n_samples / batch_size)
-    epochs = 5
     for epoch in range(epochs):
-        #np.random.shuffle(train_data)
 
         encoder.train()
         decoder.train()
