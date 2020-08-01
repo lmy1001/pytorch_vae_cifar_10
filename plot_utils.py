@@ -26,7 +26,9 @@ class Plot_Reproduce_Performance():
 
     def save_images(self, images, name='result.jpg'):
         images = images.reshape(self.n_img_x * self.n_img_y, 3, self.img_h , self.img_w)
+
         images = images.transpose(0, 2, 3, 1)
+        #images = images.reshape(self.n_img_x * self.n_img_y, self.img_h, self.img_w, 3)
         store_image = self._merge(images, [self.n_img_y, self.n_img_x])
         imsave(self.DIR + "/" + name, store_image)
 
@@ -37,15 +39,14 @@ class Plot_Reproduce_Performance():
         h_ = int(h * self.resize_factor)
         w_ = int(w * self.resize_factor)
 
-        img = np.zeros((h_ * size[0], w_ * size[1], 3))     #size 为320 * 320 * 3
+        img = np.zeros(( h_ * size[0], w_ * size[1], 3))     #size 为320 * 320 * 3
 
         for idx, image in enumerate(images):
             i = int(idx % size[1])
             j = int(idx / size[1])
 
-            image_ = imresize(image, size=(w_, h_, 3), interp='bicubic')        #image_size is：32 * 32 *3
-
-            img[j * h_:j * h_ + h_, i * w_:i * w_ + w_, :3] = image_
+            #image_ = imresize(image, size=(w_, h_, 3), interp='bicubic')        #image_size is：32 * 32 *3
+            img[j * h_:j * h_ + h_, i * w_:i * w_ + w_, :3] = image
 
         return img
 
@@ -56,20 +57,25 @@ def plot_t_sne(z, images):
     images = images.transpose(0, 2, 3, 1)
     z_embedded = TSNE(n_components=2).fit_transform(z)
     print('input_embedded:', z_embedded.shape)
+    fig, ax = plt.subplots()
+    plt.scatter(z_embedded[:, 0], z_embedded[:, 1])
 
-    plt.figure()
-    ax = plt.subplot(111)
     shown_images = np.array([[1., 1.]])
+    artists = []
     for i in range(n_samples):
         dist = np.sum((z_embedded[i] - shown_images) ** 2, 1)
         if np.min(dist) < 8e-3:
             #do not show points that are too close
             continue
         shown_images = np.r_[shown_images, [z_embedded[i]]]
-        imagebox = offsetbox.AnnotationBbox(offsetbox.OffsetImage(images[i]), z_embedded[i])
+        #imagebox = offsetbox.AnnotationBbox(offsetbox.OffsetImage(images[i]), z_embedded[i])
+        offsetimg = offsetbox.OffsetImage(images[i])
+        offsetimg.image.axes = ax
+        imagebox = offsetbox.AnnotationBbox(offsetimg, (z_embedded[i, 0], z_embedded[i, 1]))
         ax.add_artist(imagebox)
 
+
     plt.savefig(fname='latent_space.jpg', format='jpg')
-    plt.show()
+    #plt.show()
 
 

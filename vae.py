@@ -4,13 +4,14 @@ from torch.nn import functional as F
 import plot_utils
 
 class Encoder(nn.Module):
-    def __init__(self, input_dim, zdim, use_batch_norm=False):
+    def __init__(self, input_dim, zdim, use_batch_norm=False, mode='vae'):
         super(Encoder, self).__init__()
         self.input_dim = input_dim
         self.zdim = zdim
+        self.mode = mode
         self.use_batch_norm = use_batch_norm
         self.conv1 = nn.Conv2d(input_dim, 6, 5)
-        self.pool = nn.MaxPool2d(2, 2)
+        self.pool = nn.MaxPool2d(2)
         self.conv2 = nn.Conv2d(6, 16, 5)
         self.bn1 = nn.BatchNorm2d(6)
         self.bn2 = nn.BatchNorm2d(16)
@@ -36,9 +37,12 @@ class Encoder(nn.Module):
             m = F.relu(self.fc1_m(x))
             m = F.relu(self.fc2_m(m))
             m = self.fc3_m(m)
-            v = F.relu(self.fc1_mv(x))
-            v = F.relu(self.fc2_mv(v))
-            v = self.fc3_mv(v)
+            if self.mode == 'vae':
+                v = F.relu(self.fc1_mv(x))
+                v = F.relu(self.fc2_mv(v))
+                v = self.fc3_mv(v)
+            elif self.mode == 'ae':
+                v = 0
 
             return m, v
         else:
@@ -49,10 +53,12 @@ class Encoder(nn.Module):
             m = F.relu(self.fc1_bn1_m(self.fc1_m(x)))
             m = F.relu(self.fc2_bn2_m(self.fc2_m(m)))
             m = self.fc3_m(m)
-
-            v = F.relu(self.fc1_bn1_mv(self.fc1_mv(x)))
-            v = F.relu(self.fc2_bn2_mv(self.fc2_mv(v)))
-            v = self.fc3_mv(v)
+            if self.mode == 'vae':
+                v = F.relu(self.fc1_bn1_mv(self.fc1_mv(x)))
+                v = F.relu(self.fc2_bn2_mv(self.fc2_mv(v)))
+                v = self.fc3_mv(v)
+            elif self.mode == 'ae':
+                v = 0
             return m, v
 
 
@@ -101,11 +107,14 @@ class Decoder(nn.Module):
         return x
 
 
-def get_loss(encoder, decoder, input, target):
+def get_loss(encoder, decoder, input, target, mode):
     batch_size = input.size(0)
     # encoding
     mu, sigma = encoder(input)
-    z = mu + sigma * torch.randn_like(mu)
+    if mode == 'vae':
+        z = mu + sigma * torch.randn_like(mu)
+    elif mode == 'ae':
+        z = mu
 
     # decoding
     y = decoder(z)
@@ -130,11 +139,14 @@ def get_loss(encoder, decoder, input, target):
     return y, z, loss, marginal_likelihood, KL_divergence, l2_dis
 
 
-def get_ae(encoder, decoder, x):
+def get_ae(encoder, decoder, x, mode):
     # encoding
     mu, sigma = encoder(x)
     # sampling by re-parameterization technique
-    z = mu + sigma * torch.randn_like(mu)
+    if mode == 'vae':
+        z = mu + sigma * torch.randn_like(mu)
+    elif mode == 'ae':
+        z = mu
 
     # decoding
     y = decoder(z)

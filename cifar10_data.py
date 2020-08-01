@@ -25,8 +25,7 @@ def data_normalize(data, use_norm_shift = False, use_norm_scale = True):
     if use_norm_shift:
         data = data - (pixel_depth / 2.0)
     if use_norm_scale:
-        data = data / pixel_depth
-
+        data = data / float(pixel_depth)
     return data
 
 # Prepare Cifar-10 data
