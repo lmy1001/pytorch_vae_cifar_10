@@ -13,17 +13,17 @@ def parse_args():
     desc = "Pytorch implementation of 'Variational AutoEncoder (VAE)'"
     parser = argparse.ArgumentParser(description=desc)
 
-    parser.add_argument('--type', type=str, default='vae',
+    parser.add_argument('--type', type=str, default='ae',
                         help='use autoencoder or variational autoencoder', choices=['ae', 'vae'])
     parser.add_argument('--data_dir', type=str,
                         default='/Users/lmy/Dataset/Cifar-10/cifar-10-batches-py/',
-                        #default='/home/menliu/Dataset/cifar-10-batches-py/',
+                        #default='/srv/beegfs-benderdata/scratch/density_estimation/data/3DMultiView/cifar-10-batches-py/',
                         help='directory of dataset')
     parser.add_argument('--results_path', type=str, default='results',
                         help='File path of output images')
-    parser.add_argument('--train_log_name', type=str, default='log/train_log',
+    parser.add_argument('--train_log_name', type=str, default='log/ae/train_log',
                         help='File name of train log event')
-    parser.add_argument('--val_log_name', type=str, default='log/val_log',
+    parser.add_argument('--val_log_name', type=str, default='log/ae/val_log',
                         help='File name of validation log event')
     parser.add_argument('--use_batch_norm', type=bool, default=True,
                         help='Boolean for using batch normalization')
@@ -130,7 +130,7 @@ def main(args):
                                         torch.from_numpy(batch_target).float().to(device)
 
             y, z, loss, loss_likelihood, loss_divergence, l2_dis = \
-                                        vae2.get_loss(encoder, decoder, batch_input, batch_target, mode)
+                vae2.get_loss(encoder, decoder, batch_input, batch_target, mode)
 
             tot_loss = tot_loss + loss.item()
             tot_l2_loss = tot_l2_loss + l2_dis.item()
@@ -151,21 +151,22 @@ def main(args):
         writer_train.add_scalar('l2_dis', tot_l2_loss, epoch)
 
         #evaluate on val dataset
-        encoder.eval()
-        decoder.eval()
 
         if (epoch + 1) % 5 == 0 or epoch + 1 == epochs:
-            #calculate the validation loss
+            encoder.eval()
+            decoder.eval()
 
-            val_target = val_data
-            val_input = val_data
-            val_input, val_target = torch.from_numpy(val_input).float().to(device), \
-                                    torch.from_numpy(val_target).float().to(device)
+            with torch.no_grad():
+                #calculate the validation loss
+                val_target = val_data
+                val_input = val_data
+                val_input, val_target = torch.from_numpy(val_input).float().to(device), \
+                                        torch.from_numpy(val_target).float().to(device)
 
-            y_val, z_val, loss_val, loss_likelihood_val, loss_divergence_val, l2_dis_val = \
+                y_val, z_val, loss_val, loss_likelihood_val, loss_divergence_val, l2_dis_val = \
                                 vae2.get_loss(encoder, decoder, val_input, val_target, mode)
-            print("test results in val data: epoch %d: Loss %03.2f L_likelihood %03.2f L_divergence %03.2f L2_dis %03.2f " % (
-                epoch, loss_val.item(), loss_likelihood_val.item(), loss_divergence_val.item(), l2_dis_val.item()))
+                print("test results in val data: epoch %d: Loss %03.2f L_likelihood %03.2f L_divergence %03.2f L2_dis %03.2f " % (
+                    epoch, loss_val.item(), loss_likelihood_val.item(), loss_divergence_val.item(), l2_dis_val.item()))
 
             # Plot for reproduce performance
             plot_batch = torch.from_numpy(show_img).float().to(device)
@@ -180,7 +181,9 @@ def main(args):
     writer_train.close()
     writer_val.close()
 
+
     plot_utils.plot_t_sne(z_val[:100, :].detach().cpu().numpy(), val_data[:100, :, :, :])
+    plot_utils.plot_t_sne_col(z_val.detach().cpu().numpy(), val_label)
 
 if __name__=='__main__':
 

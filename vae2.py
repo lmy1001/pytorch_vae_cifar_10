@@ -43,7 +43,8 @@ class Encoder(nn.Module):
                 #v = F.relu(self.fc1_mv(x))
                 #v = self.fc2_mv(v)
                 v = F.elu(self.fc1_mv(x))
-                v = F.elu(self.fc2_mv(v))
+                #v = F.elu(self.fc2_mv(v))
+                v = self.fc2_mv(v)
             elif self.mode == 'ae':
                 v = 0
             return m, v
@@ -60,7 +61,8 @@ class Encoder(nn.Module):
                 #v = F.relu(self.fc1_bn1_mv(self.fc1_mv(x)))
                 #v = self.fc2_mv(v)
                 v = F.elu(self.fc1_bn1_mv(self.fc1_mv(x)))
-                v = F.elu(self.fc2_mv(v))
+                #v = F.elu(self.fc2_mv(v))
+                v = self.fc2_mv(v)
             elif self.mode == 'ae':
                 v = 0
             return m, v
@@ -138,12 +140,12 @@ def get_z(encoder, x):
 def get_loss(encoder, decoder, input, target, mode):
     batch_size = input.size(0)
     # encoding
-    mu, sigma = encoder(input)
+    mu, sigma = encoder(input)  #sigma = log(std**2)
     if mode == 'vae':
         std = torch.exp(0.5 * sigma)
         eps = torch.randn(sigma.size()).to(mu)
         z = mu + eps * std
-    elif mode == 'ae':
+    else:
         z = mu
 
     # decoding
@@ -153,13 +155,20 @@ def get_loss(encoder, decoder, input, target, mode):
     target = target.view(-1, 3 * 32 * 32)
     #marginal_likelihood = F.binary_cross_entropy(y, target, reduction='sum') / batch_size
     marginal_likelihood = F.binary_cross_entropy(y, target) * 32 * 32
+    #marginal_likelihood = 0
     l2_dis = torch.sum((y - target) ** 2) / batch_size
-    KL_divergence = -0.5 * torch.sum(1 + sigma - torch.pow(mu, 2) - torch.exp(sigma)
-                               ).sum() / batch_size
-    #loss = marginal_likelihood + KL_divergence
 
-    loss = l2_dis + KL_divergence
+    if mode == 'ae':
+        KL_divergence = torch.zeros(1)
+        loss = l2_dis
+    else:
+        KL_divergence = -0.5 * torch.sum(1 + sigma - torch.pow(mu, 2) - torch.exp(sigma)
+                            ).sum() / batch_size
+    #loss = marginal_likelihood + KL_divergence
+        loss = l2_dis + KL_divergence
+
     return y, z, loss, marginal_likelihood, KL_divergence, l2_dis
+
 
 
 

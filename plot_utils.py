@@ -55,7 +55,7 @@ class Plot_Reproduce_Performance():
 def plot_t_sne(z, images):
     n_samples = images.shape[0]
     images = images.transpose(0, 2, 3, 1)
-    z_embedded = TSNE(n_components=2).fit_transform(z)
+    z_embedded = TSNE(n_components=2, perplexity=100).fit_transform(z)
     print('input_embedded:', z_embedded.shape)
     fig, ax = plt.subplots()
     plt.scatter(z_embedded[:, 0], z_embedded[:, 1])
@@ -74,8 +74,22 @@ def plot_t_sne(z, images):
         imagebox = offsetbox.AnnotationBbox(offsetimg, (z_embedded[i, 0], z_embedded[i, 1]))
         ax.add_artist(imagebox)
 
-
     plt.savefig(fname='latent_space.jpg', format='jpg')
     #plt.show()
+
+def plot_t_sne_col(z, labels):
+    #n_samples = labels.size(
+    z_embedded = TSNE(n_components=2, perplexity=100).fit_transform(z)
+    print('input_embedded:', z_embedded.shape)
+    fig, ax = plt.subplots()
+    plt.scatter(z_embedded[:, 0], z_embedded[:, 1], c=labels)
+    plt.savefig(fname='latent_space_color.jpg', format='jpg')
+    #plt.show()
+
+
+if __name__=='__main__':
+    z = np.random.normal(0, 1, (5, 128))
+    labels = [1, 2, 3, 4, 5]
+    plot_t_sne(z, labels)
 
 
